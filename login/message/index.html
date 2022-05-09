@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <title>XX学校传达室</title>
+    <link rel="stylesheet" href="plugins/layui/css/layui.css">
+    <link rel="stylesheet" href="css/fastmqtt.css">
+    <script src="plugins/layui/layui.js"></script>
+    <script src="plugins/jquery/jquery-3.4.1.min.js"></script>
+    <script src="plugins/paho/paho-mqtt-min.js"></script>
+
+</head>
+
+<body bgcolor="#FFFFF0">
+
+    <div style="padding: 15px; padding-top:10px;">
+        <div class="layui-tab layui-tab-brief" lay-filter="mqtttab">
+            <ul class="layui-tab-title" style="margin-bottom:5px;">
+                <li class="layui-this">连接服务器</li>
+                <li>订阅主题</li>
+                <li>发布通知</li>
+                <li>消息通知<span id="newdot" class="layui-badge-dot layui-bg-red layui-hide"></span></li>
+                <li>操作记录</li>
+              
+            </ul>
+            <div class="layui-tab-content">
+                <div class="layui-tab-item layui-show">
+                    <form class="layui-form">
+                        <div style="margin-top:20px;margin-bottom:30px;">
+                            <button id="connect-btn" class="layui-btn fm-btn-normal" lay-filter="connect" lay-submit type="button">连接MQTT服务器</button>
+                            <button id="disconnect-btn" class="layui-btn layui-btn-danger layui-hide" onclick="disconnect()" type="button">断开连接</button>
+                        </div>
+                        <span class="layui-badge fm-tag">服务器</span>
+                        <div class="layui-form-item">
+                            <label class="layui-form-label">域名*</label>
+                            <div class="layui-input-inline" style="width: 150px;">
+                                <input type="text" name="hostname" required lay-verify="required" value="119.23.190.217" autocomplete="off" class="layui-input">
+                            </div>
+                            <label class="layui-form-label">端口*</label>
+                            <div class="layui-input-inline" style="width: 150px;">
+                                <input type="text" name="port" required lay-verify="required" value="8083" autocomplete="off" class="layui-input">
+                            </div>
+                            <label class="layui-form-label">子协议URL*</label>
+                            <div class="layui-input-inline" style="width: 150px;">
+                                <input type="text" name="suburl" required lay-verify="required" value="/mqtt" autocomplete="off" class="layui-input">
+                            </div>
+                        </div>
+                        <span class="layui-badge fm-tag">账号</span>
+                        <div class="layui-form-item" style="display:none">
+                            <label class="layui-form-label">username</label>
+                            <div class="layui-input-block" style="width: 500px;">
+                                <input type="text" name="username" placeholder="MQTT协议：username" autocomplete="off" class="layui-input">
+                            </div>
+                        </div>
+                        <div class="layui-form-item" style="display:none">
+                            <label class="layui-form-label">password</label>
+                            <div class="layui-input-inline" style="width: 500px;">
+                                <input id="password" type="text" name="password" placeholder="MQTT协议：password" autocomplete="off" class="layui-input">
+                            </div>
+                        </div>
+                        <div class="layui-form-item">
+                            <label class="layui-form-label">clientId*</label>
+                            <div class="layui-input-inline" style="width: 500px;">
+                                <input id="clientId" type="text" name="clientId" required lay-verify="required" placeholder="MQTT协议：clientId" autocomplete="off" class="layui-input">
+                            </div>
+                        </div>
+
+                        <!--style="display:none"-->
+                        <div style="display:none"> 
+                            <span class="layui-badge fm-tag">连接参数</span>
+                            <div class="layui-form-item">
+                                <label class="layui-form-label">连接超时(s)</label>
+                                <div class="layui-input-inline" style="width: 80px;">
+                                    <input type="text" name="timeout" value="10" placeholder="示例：10" autocomplete="off" class="layui-input">
+                                </div>
+                                <label class="layui-form-label">KeepAlive(s)</label>
+                                <div class="layui-input-inline" style="width: 80px;">
+                                    <input type="text" name="keepalive" value="60" placeholder="示例：60" autocomplete="off" class="layui-input">
+                                </div>
+                            </div>
+                            <div class="layui-form-item">
+                                <label class="layui-form-label">CleanSession</label>
+                                <div class="layui-input-block">
+                                    <input type="radio" name="cleansession" value=false title="持久(false)">
+                                    <input type="radio" name="cleansession" value=true title="临时(true)" checked>
+                                </div>
+                            </div>
+                            <div class="layui-form-item">
+                                <label class="layui-form-label">使用SSL</label>
+                                <div class="layui-input-block" style="width: 230px;">
+                                    <input type="radio" name="ssl" value=false title="WS" checked>
+                                    <input type="radio" name="ssl" value=true title="WS over SSL">
+                                </div>
+                            </div>
+                            <div class="layui-form-item">
+                                <label class="layui-form-label">自动重连</label>
+                                <div class="layui-input-block">
+                                    <input type="radio" name="reconnect" value=true title="是">
+                                    <input type="radio" name="reconnect" value=false title="否" checked>
+                                </div>
+                            </div>
+                            <div class="layui-form-item">
+                                <label class="layui-form-label">MQTT版本</label>
+                                <div class="layui-input-block">
+                                    <input type="radio" name="mqttversion" value="3" title="3.1">
+                                    <input type="radio" name="mqttversion" value="4" title="3.1.1" checked>
+                                </div>
+                            </div>
+                            <span class="layui-badge fm-tag">遗嘱消息</span>
+                            <div class="layui-form-item">
+                                <label class="layui-form-label">是否设置遗嘱消息</label>
+                                <input type="checkbox" name="wmopen" value="1" lay-filter="wmfilter" lay-skin="switch" lay-text="ON|OFF">
+                            </div>
+                            <div id="wmdiv" class="layui-hide">
+                                <div class="layui-form-item">
+                                    <label class="layui-form-label">主题</label>
+                                    <div class="layui-input-inline" style="width: 300px;">
+                                        <input type="text" name="wmtopic" value="/offline" placeholder="示例：/offline" autocomplete="off" class="layui-input">
+                                    </div>
+                                </div>
+                                <div class="layui-form-item">
+                                    <label class="layui-form-label">QoS</label>
+                                    <div class="layui-input-inline">
+                                        <input type="radio" name="wmqos" value="0" title="0">
+                                        <input type="radio" name="wmqos" value="1" title="1" checked>
+                                        <input type="radio" name="wmqos" value="2" title="2">
+                                    </div>
+                                </div>
+                               
+                                <div class="layui-form-item">
+                                    <label class="layui-form-label">内容</label>
+                                    <div class="layui-input-inline" style="width: 300px;">
+                                        <textarea name="wmpayload" class="layui-textarea"></textarea>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+
+
+
+                    </form>
+                </div>
+                <div class="layui-tab-item">
+                    <form class="layui-form">
+                        <span class="layui-badge layui-bg-cyan" style="width:100px;height:24px;line-height:24px;margin-bottom:15px;margin-top:5px;">
+                        订阅
+                    </span>
+                        <div class="layui-form-item">
+                            <label class="layui-form-label">订阅主题</label>
+                            <div class="layui-input-block" style="width: 300px;">
+                                <input type="text" name="subtopic" placeholder="示例：传达室" autocomplete="off" class="layui-input">
+                            </div>
+                        </div>
+                        <div class="layui-form-item">
+                            <label class="layui-form-label">QoS</label>
+                            <div class="layui-input-block">
+                                <input type="radio" name="subqos" value="0" title="0" >
+                                <input type="radio" name="subqos" value="1" title="1">
+                                <input type="radio" name="subqos" value="2" title="2" checked>
+                            </div>
+                        </div>
+                        <div class="layui-form-item">
+
+                            <div class="layui-input-block">
+                                <div style="margin-top:20px;margin-bottom:30px;">
+                                    <button class="layui-btn fm-btn-normal" lay-filter="subscribe" lay-submit type="button">订阅主题</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <span class="layui-badge layui-bg-cyan" style="width:100px;height:24px;line-height:24px;margin-bottom:15px;margin-top:5px;">
+                    订阅状态
+                </span>
+                        <table class="layui-table">
+                            <colgroup>
+                                <col width="80">
+                                <col width="400">
+                                <col width="100">
+                                <col width="100">
+                                <col width="100">
+                            </colgroup>
+                            <thead>
+                                <tr>
+                                    <th>序号</th>
+                                    <th>订阅主题</th>
+                                    <th>请求QoS</th>
+                                    <th>授权QoS</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="topiclist">
+                            </tbody>
+                        </table>
+
+                    </form>
+                </div>
+                <div class="layui-tab-item">
+                    <form class="layui-form">
+                        <span class="layui-badge layui-bg-cyan" style="width:100px;height:24px;line-height:24px;margin-bottom:20px;">
+                    发布
+                </span>
+                        <div class="layui-form-item">
+                            <label class="layui-form-label">班级</label>
+                            <div class="layui-input-inline" style="width: 300px;">
+                                <input type="text" name="pubtopic" placeholder="示例：1班" autocomplete="off" class="layui-input">
+                            </div>
+                        </div>
+                        <div class="layui-form-item">
+                            <label class="layui-form-label">QoS</label>
+                            <div class="layui-input-inline">
+                                <input type="radio" name="pubqos" value="0" title="0">
+                                <input type="radio" name="pubqos" value="1" title="1">
+                                <input type="radio" name="pubqos" value="2" title="2" checked>
+                            </div>
+                        </div>
+                        <div class="layui-form-item">
+                            <label class="layui-form-label">内容</label>
+                            <div class="layui-input-inline">
+                                <textarea name="pubpayload" class="layui-textarea" style="width:400px;height:300px;"></textarea>
+                            </div>
+                        </div>
+ 
+                        <div class="layui-form-item">
+                            <div class="layui-input-block">
+                                <button class="layui-btn fm-btn-normal" type="button" lay-submit lay-filter="publish">发布</button>
+                            </div>
+                        </div>
+
+                    </form>
+                </div>
+                <div class="layui-tab-item">
+                    <textarea id="rcv" placeholder="收到消息" class="layui-textarea" style="height:600px"></textarea>
+                </div>
+                <div class="layui-tab-item">
+                    <textarea id="log" placeholder="操作记录" class="layui-textarea" style="height:600px"></textarea>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+
+
+<script type="text/javascript">
+    var client = null;
+    var connected = false;
+//连接函数
+    function disconnect() {
+        client.disconnect();
+        layer.msg('断开连接成功', {//layer.msg=弹出消息框
+            icon: 1,//显示订阅成功的图片
+            offset: 200
+        });
+        $("#connect-btn").removeClass("layui-hide");//移除layui-hide
+        $("#disconnect-btn").addClass("layui-hide");
+        msg = " [连接信息] | clientId=" + client.clientId;
+        title = "DISCONNECT 断开连接成功";
+        logging(title, msg);
+    }
+//订阅函数
+    function subscribe(topic, qos) {
+        var id = $("#topiclist").children("tr:last-child").attr("id");//返回表格中最后一个，如果没被定义则
+		
+        if (id == undefined) {
+            id = 1;
+        } else {
+            id = Number(id) + 1;//计数用的
+        }
+		//console.log(id)
+        client.subscribe(topic, {
+            qos: qos,
+            onSuccess: onSubSucc,
+            onFailure: onSubFail,
+            invocationContext: {
+                topic: topic,
+                qos: qos,
+                clientId: client.clientId,
+                id: id
+            }
+        });
+//如果订阅成功函数
+        function onSubSucc(context) {
+            topic = context.invocationContext.topic;
+
+            if ($("td:contains(" + topic + ")").length == 0) {
+                $("#topiclist").append(//append添加行
+                    " <tr id='" + context.invocationContext.id + "'>\n" +
+                    "    <td>" + context.invocationContext.id + "</td>\n" +
+                    "    <td>" + topic + "</td>\n" +
+                    "    <td>" + context.invocationContext.qos + "</td>\n" +
+                    "    <td>" + context.grantedQos + "</td>\n" +
+                    "    <td>\n" +
+                    "       <button class='layui-btn layui-btn-danger' " +
+                    "onclick='unsubscribe(" + id + ")' type='button'>取消订阅</button>\n" +
+                    "    </td>\n" +
+                    "</tr>"
+                );
+                layer.msg('订阅成功', {
+                    icon: 1,
+                    offset: 200
+                });
+            } else {
+                qosobj = $("td:contains(" + topic + ")")[0].nextElementSibling;
+                qosobj.innerText = context.invocationContext.qos;
+                gqosobj = qosobj.nextElementSibling;
+                gqosobj.innerText = context.grantedQos;
+                layer.msg('主题已订阅,不能重复订阅', {
+                    icon: 1,
+                    offset: 200
+                });
+            }
+
+            msg = " [订阅信息] | clientId= " + context.invocationContext.clientId + ", topicFilter=" + topic +
+                ", QoS=" + context.invocationContext.qos + ", grantedQoS=" + context.grantedQos;
+            title = "SUBSCRIBE 不能重复订阅";
+            logging(title, msg);
+        }
+//如果订阅失败函数
+        function onSubFail(context) {
+            layer.msg('订阅失败', {
+                icon: 2,
+                offset: 200
+            });
+            msg = " [订阅信息] | clientId= " + context.invocationContext.clientId + ", topicFilter=" + topic +
+                ", QoS=" + context.invocationContext.qos + ", errorCode=" + context.errorCode +
+                ", errorMessage=" + context.errorMessage;
+            title = "SUBSCRIBE 订阅失败";
+            logging(title, msg);
+        }
+    }
+
+    function unsubscribe(id) {
+        if (connected == false) {
+            layer.msg('取消订阅前需要先连接', {
+                icon: 2,
+                offset: 200
+            });
+            return;
+        }
+        topic = $("#" + id).children("td:nth-child(2)").text();//nth-child(n) 选择器匹配属于其父元素的第 N 个子元素，不论元素的类型。
+        client.unsubscribe(topic, {
+            onSuccess: onUnsubSucc,
+            onFailure: onUnsubFail,
+            invocationContext: {
+                topic: topic,
+                clientId: client.clientId,
+                id: id
+            }
+        });
+
+        function onUnsubSucc(context) {
+            layer.msg('取消订阅成功', {
+                icon: 1,
+                offset: 200
+            });
+            $("#" + context.invocationContext.id).remove();
+            msg = " [订阅信息] | clientId= " + context.invocationContext.clientId + ", topicFilter=" + topic;
+            title = "UNSUBSCRIBE 取消订阅成功";
+            logging(title, msg);
+        }
+
+        function onUnsubFail(context, errorCode, errorMessage) {
+            layer.msg('取消订阅失败', {
+                icon: 2,
+                offset: 200
+            });
+            msg = " [订阅信息] | clientId= " + context.invocationContext.clientId + ", topicFilter=" + topic +
+                ", errorCode=" + context.errorCode + ", errorMessage=" + context.errorMessage;
+            title = "UNSUBSCRIBE 取消订阅失败";
+            logging(title, msg);
+        }
+    }
+
+
+    function publish(topic, payload, qos, retain) {
+        console.log(topic, payload, qos, retain);
+        client.publish(topic, payload, qos, retain);
+    }
+
+    layui.use(['form', 'table', 'layer', 'element'], function() {
+        var form = layui.form;
+        var table = layui.table;
+        var element = layui.element;
+
+        element.on('tab(mqtttab)', function(data) {//element.on(filter, callback); 事件监听
+		//console.log(data);
+            if (data.index == 3) {//如果页面在消息通知页面，增加layui-hide
+                $("#newdot").addClass("layui-hide");
+            }
+        });
+
+        //监听提交
+        form.on('submit(subscribe)', function(rawdata) {//监听订阅主题按钮
+            if (connected == false) {
+                layer.msg('订阅前需要先连接服务器', {
+                    icon: 2,
+                    offset: 200
+                });
+                return;
+            }
+            var data = rawdata.field;
+            var topic = data.subtopic;
+            var qos = Number(data.subqos);
+            subscribe(topic, qos);
+        });
+
+        //监听提交
+        form.on('submit(publish)', function(rawdata) {//监听发布按钮
+            if (connected == false) {
+                layer.msg('发布前需要先连接服务器', {
+                    icon: 2,
+                    offset: 200
+                });
+                return;
+            }
+            var data = rawdata.field;
+            var topic = data.pubtopic;
+            var qos = Number(data.pubqos);
+            var payload = data.pubpayload;
+            var retain = data.pubretain == true ? true : false;
+            publish(topic, payload, qos, retain);
+        });
+
+
+        //监听提交
+        form.on('submit(connect)', function(rawdata) {//监听连接按钮
+            var data = rawdata.field;
+
+            var hostname = data.hostname;
+            var port = Number(data.port);
+            var suburl = data.suburl;
+
+            var username = data.username;
+            var password = data.password;
+            var clientId = data.clientId;
+
+            var timeout = data.timeout == "" ? 10 : Number(data.timeout);
+            var keepalive = data.keepalive == "" ? 60 : Number(data.keepalive);
+            var cleansession = data.cleansession == "true" ? true : false;
+            var ssl = data.ssl == "true" ? true : false;
+            var reconnect = data.reconnect == "true" ? true : false;
+            var mqttversion = Number(data.mqttversion);
+
+            var willmessage = null;
+
+
+            if (data.wmopen == 1) {
+                var willmessage = new Paho.Message(data.wmpayload);
+                willmessage.retained = data.wmretain == "true" ? true : false;
+                willmessage.qos = Number(data.wmqos);
+                willmessage.destinationName = data.wmtopic;
+            }
+
+            client = new Paho.Client(hostname, port, suburl, clientId);
+
+            // set callback handlers
+            client.onConnectionLost = onConnectionLost;
+            client.onMessageArrived = onMessageArrived;
+            client.onMessageDelivered = onMessageDelivered;
+
+            var options = {
+                invocationContext: {
+                    host: hostname,
+                    port: port,
+                    path: suburl,
+                    clientId: clientId
+                },
+                timeout: timeout,
+                keepAliveInterval: keepalive,
+                cleanSession: cleansession,
+                useSSL: ssl,
+                reconnect: reconnect,
+                mqttVersion: mqttversion,
+                onSuccess: onSuccess,
+                onFailure: onFailure,
+                userName: username,
+                password: password
+
+            };
+
+            client.connect(options);
+
+
+            var msg = " [服务器] | " + hostname + ":" + port + suburl + "\n" +
+                " [帐号] | username=" + username + ", password=" + password + ", clientId" + clientId + "\n" +
+                " [连接参数] | timeout=" + timeout + ", keepalive=" + keepalive + ", cleansession=" + cleansession +
+                ", ssl=" + ssl + ", reconnect=" + reconnect + ", mqttversion=" + mqttversion;
+
+            if (data.wmopen == 1) {
+                msg += "\n [遗嘱消息] | topic=" + data.wmtopic + ", qos=" + data.wmqos + ", retained=" + data.wmretain +
+                    ", payload=" + data.wmpayload;
+            }
+
+            title = "CONNECT 发起连接操作";
+            logging(title, msg);
+
+
+            // called when the client connects
+            function onSuccess(context) {//定义函数连接成功
+                var connectionString = context.invocationContext.host + ":" + context.invocationContext.port + context.invocationContext.path;
+                layer.msg('连接成功', {
+                    icon: 1,
+                    offset: 200
+                });
+                $("#connect-btn").addClass("layui-hide");//隐藏连接mqtt服务器按钮
+                $("#disconnect-btn").removeClass("layui-hide");//显示断开连接按钮
+                connected = true;
+                msg = " [连接信息] | clientId=" + context.invocationContext.clientId;
+                title = "CONNECT 连接成功";
+                logging(title, msg);
+            }
+
+            function onFailure(context) {//定义连接失败函数
+                console.log(context)
+                layer.msg('连接失败', {
+                    icon: 2,
+                    offset: 200
+                });
+                connected = false;
+                msg = " [连接信息] | clientId=" + context.invocationContext.clientId +
+                    ", errorCode=" + context.errorCode + ", errorMessage=" + context.errorMessage;
+                title = "CONNECT 连接失败";
+                logging(title, msg);
+            }
+
+            // called when the client loses its connection
+            function onConnectionLost(context) {
+                if (context.errorCode !== 0) {
+                    layer.msg('连接异常断开', {
+                        icon: 2,
+                        offset: 200
+                    });
+                    msg = " [错误信息] | errorCode=" + context.errorCode + ", errorMessage=" + context.errorMessage;
+                    title = "CONNECT 连接异常断开";
+                    logging(title, msg);
+                }
+				$("#connect-btn").removeClass("layui-hide");//移除layui-hide
+				$("#disconnect-btn").addClass("layui-hide");
+                connected = false;
+            }
+
+            // called when a message arrives定义收到消息的函数
+            function onMessageArrived(message) {
+                var date = new Date();
+                $("#rcv").prepend(date.toUTCString() + " - " + "收到消息" + ":\n" +
+                    " [收到消息] | 来自：" + message.destinationName + ", 消息质量：" + message.qos +
+                  //  ", retained=" + message.retained + ", duplicate=" + message.duplicate +
+                    ", 消息内容：" + message.payloadString + "\n" +
+                    "========\n");
+                $("#newdot").removeClass("layui-hide");
+            }
+
+            function onMessageDelivered(message) {
+                layer.msg('消息发送成功', {
+                    icon: 1,
+                    offset: 200
+                });
+                msg = " [消息体] | topic=" + message.destinationName + ", QoS=" + message.qos +
+                    ", retained=" + message.retained + ", duplicate=" + message.duplicate +
+                    ", payload=" + message.payloadString;
+                title = "PUBLISH 消息发送成功";
+                logging(title, msg);
+            }
+
+        });
+//此参数已被隐藏
+        form.on('switch(wmfilter)', function(data) {
+            if (data.elem.checked) {
+                $("#wmdiv").removeClass("layui-hide");
+            } else {
+                $("#wmdiv").addClass("layui-hide");
+            }
+        });
+    });
+
+    function makeid() {
+        var text = "";
+        var possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+
+        for (var i = 0; i < 15; i++)
+            text += possible.charAt(Math.floor(Math.random() * possible.length));
+        return "chuandashi"; //+text;
+    }
+
+    $("#clientId").val(makeid());
+
+    function logging(title, msg) {
+        var date = new Date();
+        $("#log").prepend(date.toUTCString() + " - " + title + ":\n" +//prepend插入内容
+            msg + "\n" +
+            "========\n");
+    }
+</script>
+
+</html>
